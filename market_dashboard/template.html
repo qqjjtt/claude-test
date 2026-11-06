@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>市场情绪面板</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.0/echarts.min.js"></script>
+<style>
+:root{
+  --bg:#f6f1ea; --card:#fffdf9; --line:#ece3d6; --ink:#2b2621; --mute:#8a8178; --faint:#b9b0a5;
+  --red:#c8402f; --orange:#e08a2a; --blue:#2f5d8a; --green:#2a9d75; --track:#f1ebe2;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.55 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+.wrap{max-width:1280px;margin:0 auto;padding:20px 16px 48px}
+header{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 16px;margin-bottom:16px}
+header h1{font-size:22px;margin:0}
+header .meta{color:var(--mute);font-size:12px}
+.demo{background:#fde8e4;color:var(--red);border:1px solid #f3c1b8;border-radius:8px;padding:8px 12px;margin-bottom:16px;font-weight:600}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:18px}
+.card h2{font-size:18px;margin:0 0 2px;display:flex;align-items:center;gap:8px}
+.card h2::before{content:"";width:4px;height:18px;background:var(--red);border-radius:2px}
+.sub{color:var(--mute);font-size:12.5px;margin-bottom:12px}
+.red{color:var(--red)} .green{color:var(--green)} .orange{color:var(--orange)} .blue{color:var(--blue)} .mute{color:var(--mute)}
+/* KPI */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.kpi{border:1px solid var(--line);border-radius:12px;padding:12px 16px;background:#fbf7f1}
+.kpi .l{font-size:12px;color:var(--mute)}
+.kpi .v{font-size:34px;font-weight:800;line-height:1.15}
+.kpi .v small{font-size:14px;font-weight:600;margin-left:2px}
+.kpi .d{font-size:12px;color:#5d554d}
+.bands{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--mute);margin:12px 0 0}
+.bands i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:4px;border:1px solid var(--line)}
+.chart{width:100%;height:380px}
+.dims{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:12px;color:var(--mute)}
+.dims b{color:var(--ink)}
+/* 浓度墙 */
+.wall{width:100%;border-collapse:collapse}
+.wall th{font-weight:500;color:var(--mute);font-size:12px;text-align:left;padding:4px 6px;border-bottom:2px solid var(--line)}
+.wall td{padding:7px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
+.wall td.nm{font-size:16px;font-weight:600}
+.wall td.nm .n{font-size:12px;color:var(--faint);font-weight:400;margin-left:6px}
+.wall td.bar{width:52%}
+.track{position:relative;height:14px;background:var(--track);border-radius:7px}
+.fill{position:absolute;left:0;top:0;bottom:0;border-radius:7px}
+.tick{position:absolute;top:-4px;bottom:-4px;width:2px;background:#3b3530}
+.wall td.v{font-size:18px;font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
+.wall td.c{text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+.wall tr.top td{background:#fff5f2}
+.hot{background:var(--red);color:var(--red)} .warm{background:var(--orange);color:var(--orange)} .cool{background:var(--blue);color:var(--blue)}
+.tv.hot,.tv.warm,.tv.cool{background:none}
+/* tabs */
+.head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;align-items:flex-start}
+.tabs{display:flex;background:#f1ebe2;border-radius:10px;padding:4px}
+.tabs button{border:0;background:none;padding:6px 14px;border-radius:8px;font:inherit;color:var(--mute);cursor:pointer}
+.tabs button.on{background:#fff;color:var(--ink);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+/* 底部两栏 */
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.cols .card{margin-bottom:0}
+.days{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:12px 0}
+.day{border:1px solid var(--line);border-radius:12px;background:#fbf7f1;padding:8px;text-align:center}
+.day .l{font-size:12px;color:var(--mute);border:1px solid var(--line);border-radius:8px;padding:4px;background:#fff}
+.day .v{font-size:22px;font-weight:800;border:1px solid var(--line);border-radius:8px;padding:8px 4px;margin-top:6px;background:#fff}
+.note{font-size:12px;color:var(--mute);margin-top:6px}
+.note b{color:var(--red);font-weight:600}
+.fp{width:100%;border-collapse:collapse;font-size:14px}
+.fp td{padding:9px 2px;border-bottom:1px dashed var(--line)}
+.fp td:last-child{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+.verdict{display:flex;gap:16px;align-items:center;border:2px solid #f0a167;background:#fffaf5;border-radius:14px;padding:14px 16px;margin:16px 0}
+.verdict .big{text-align:center;min-width:84px;border-right:1px dashed #f0a167;padding-right:14px}
+.verdict .big b{display:block;font-size:30px;color:var(--orange)}
+.verdict .big span{font-size:12px;color:var(--mute)}
+.verdict p{margin:0;font-size:13.5px}
+.ratio{display:grid;grid-template-columns:96px 1fr 56px;gap:10px;align-items:center;margin:10px 0}
+.ratio .track{height:22px;border-radius:6px}
+.ratio .fill{border-radius:6px}
+.ratio .base{position:absolute;top:-3px;bottom:-3px;border-left:1.5px dashed #a59b90}
+.ratio .p{text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+.empty{color:var(--faint)}
+@media (max-width:900px){
+  .kpis{grid-template-columns:repeat(2,1fr)}
+  .cols{grid-template-columns:1fr}
+  .wall td.bar{width:36%}
+}
+@media (max-width:560px){
+  .kpi .v{font-size:26px}
+  .wall .hide-s{display:none}
+  .wall td.nm{font-size:14px}
+  .wall td{white-space:normal}
+  .chart{height:300px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>市场情绪 · ETF 资金面板</h1>
+    <span class="meta" id="meta"></span>
+  </header>
+  <div id="demo"></div>
+
+  <!-- 1 市场体温 -->
+  <section class="card">
+    <h2>市场体温</h2>
+    <div class="sub">五维等权综合分（0—100）：上涨家数占比 · 涨跌幅中位数 · 涨停/跌停 · 量能 · 赚钱效应</div>
+    <div class="kpis" id="kpis"></div>
+    <div class="bands">
+      <span><i style="background:#fbe3df"></i>过热 80+</span><span><i style="background:#fdeedd"></i>温暖 60—80</span>
+      <span><i style="background:#faf5e6"></i>中性 40—60</span><span><i style="background:#eef3f6"></i>偏冷 20—40</span>
+      <span><i style="background:#e8eef4"></i>冰冷 &lt;20</span><span style="margin-left:auto" id="meanLbl"></span>
+    </div>
+    <div class="chart" id="tempChart"></div>
+    <div class="dims" id="dims"></div>
+  </section>
+
+  <!-- 2 韭菜浓度热力墙 -->
+  <section class="card">
+    <h2>板块韭菜浓度</h2>
+    <div class="sub" id="concSub"></div>
+    <table class="wall">
+      <thead><tr><th>板块（按今日浓度降序）</th><th class="hide-s">浓度条 · 竖刻度 = 昨日同法</th><th style="text-align:right">今日</th><th style="text-align:right">环比</th></tr></thead>
+      <tbody id="wall"></tbody>
+    </table>
+  </section>
+
+  <!-- 3 资金流向与指数背离 -->
+  <section class="card">
+    <div class="head">
+      <div><h2>资金流向与指数背离</h2><div class="sub" id="flowSub"></div></div>
+      <div class="tabs" id="flowTabs">
+        <button data-k="cum">累计净申购</button><button data-k="daily" class="on">单日净申赎</button><button data-k="shares">单只份额</button>
+      </div>
+    </div>
+    <div class="chart" id="flowChart"></div>
+  </section>
+
+  <!-- 4 底部两栏 -->
+  <div class="cols">
+    <section class="card">
+      <h2 id="roundTitle"></h2>
+      <div class="sub" id="roundSub"></div>
+      <div class="days" id="days"></div>
+      <div class="sub" style="margin:4px 0 0">月度净申赎（亿元）· <span class="red">红 = 净申购</span> <span class="green">绿 = 净赎回</span></div>
+      <div class="chart" id="monthChart" style="height:320px"></div>
+      <div class="note">缺值保持空值，<b>不填 0，也不当卖出</b>；当日 80% 以上成分未披露份额时整日记为「待披露」。</div>
+    </section>
+    <section class="card">
+      <h2 id="fpTitle"></h2>
+      <div class="sub">成交额口径，不等于净买入；尾盘为最后 30 分钟成交占比</div>
+      <table class="fp" id="fp"></table>
+      <div class="verdict" id="verdict"></div>
+      <div class="sub" style="margin:0">今日成交 ÷ 昨日成交（虚线 = 100% 持平）</div>
+      <div id="ratios"></div>
+      <div class="note" id="fpFoot"></div>
+    </section>
+  </div>
+</div>
+
+<script>
+const D = /*__DATA__*/null;
+const $ = id => document.getElementById(id);
+const fmt = (v, nd = 2, sign = false) => v == null ? '—' : (sign && v > 0 ? '+' : '') + Number(v).toLocaleString('zh-CN', {minimumFractionDigits: nd, maximumFractionDigits: nd});
+const cls = v => v == null ? 'mute' : v > 0 ? 'red' : v < 0 ? 'green' : 'mute';
+const C = {red: '#c8402f', orange: '#e08a2a', blue: '#2f5d8a', green: '#2a9d75', mute: '#8a8178', line: '#ece3d6'};
+const charts = [];
+const mk = (id, opt) => { const c = echarts.init($(id)); c.setOption(opt); charts.push(c); return c; };
+addEventListener('resize', () => charts.forEach(c => c.resize()));
+const axisBase = {axisLine: {lineStyle: {color: C.line}}, axisTick: {show: false}, axisLabel: {color: C.mute}, splitLine: {lineStyle: {color: '#f1ebe2'}}};
+
+$('meta').textContent = `交易日 ${D.date} · 数据源 ${D.source} · 板块口径 ${D.sector_source} · 尾盘 ${D.tail_source} · 生成于 ${D.generated}`;
+if (D.source.startsWith('demo')) $('demo').innerHTML = '<div class="demo">⚠ 当前为随机模拟数据，仅用于预览版式，数字没有任何意义。去掉 --demo 并设置 TUSHARE_TOKEN 后生成真实数据。</div>';
+
+/* ---------- 1 体温 ---------- */
+(function () {
+  const t = D.temp;
+  if (!t) { $('kpis').innerHTML = '<div class="empty">数据不足</div>'; return; }
+  const tc = v => v >= 60 ? 'red' : v >= 40 ? 'orange' : 'blue';
+  $('kpis').innerHTML = `
+    <div class="kpi"><div class="l">今日体温</div><div class="v ${tc(t.today)}">${fmt(t.today, 1)}<small>分</small></div>
+      <div class="d">五维口径${t.six != null ? ` · 六维含浓度为 ${fmt(t.six, 1)}` : ''}</div></div>
+    <div class="kpi"><div class="l">昨日 → 今日</div><div class="v ${cls(t.diff)}">${fmt(t.diff, 1, true)}<small>分</small></div>
+      <div class="d">${fmt(t.prev, 1)} → ${fmt(t.today, 1)} · ${t.move}</div></div>
+    <div class="kpi"><div class="l">${t.n} 日均值</div><div class="v ${cls(t.dev)}">${fmt(t.dev, 1, true)}<small>分</small></div>
+      <div class="d">今日 ${fmt(t.today, 1)} vs 均值 ${fmt(t.mean, 1)} · ${t.mood}</div></div>
+    <div class="kpi"><div class="l">近 ${t.n} 日排名</div><div class="v red">第 ${t.rank}<small>高</small></div>
+      <div class="d">${t.n} 期中高于 ${t.beat}% 的交易日 · 最高 ${fmt(t.max, 1)}（${t.max_date}）</div></div>`;
+  $('meanLbl').innerHTML = `— — ${t.n} 日均值 ${fmt(t.mean, 1)}`;
+  $('dims').innerHTML = '今日分项：' + t.dims.map(d => `<span>${d.name} <b>${fmt(d.value, 1)}</b></span>`).join('') +
+    `<span>涨停 <b class="red">${t.lu}</b> / 跌停 <b class="green">${t.ld}</b></span><span>样本 ${t.range} 共 ${t.n} 期</span>`;
+  const n = t.dates.length;
+  const iMax = t.scores.indexOf(t.max), iMin = t.scores.indexOf(t.min);
+  const band = (a, b, c) => [{yAxis: a, itemStyle: {color: c}}, {yAxis: b}];
+  mk('tempChart', {
+    grid: {left: 40, right: 44, top: 60, bottom: 30},
+    tooltip: {trigger: 'axis', valueFormatter: v => fmt(v, 1) + ' 分'},
+    xAxis: {...axisBase, type: 'category', data: t.dates, boundaryGap: false},
+    yAxis: {...axisBase, type: 'value', min: 0, max: 100, interval: 20},
+    series: [{
+      type: 'line', data: t.scores, symbolSize: 6, lineStyle: {width: 3, color: C.orange}, itemStyle: {color: C.orange},
+      areaStyle: {color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{offset: 0, color: 'rgba(224,138,42,.28)'}, {offset: 1, color: 'rgba(224,138,42,0)'}])},
+      markArea: {silent: true, data: [band(80, 100, 'rgba(200,64,47,.05)'), band(0, 20, 'rgba(47,93,138,.05)'),
+        [{xAxis: n - 1, itemStyle: {color: 'rgba(240,161,103,.18)'}}, {xAxis: n - 1}]]},
+      markLine: {silent: true, symbol: 'none', label: {show: false}, lineStyle: {type: 'dashed', color: '#a59b90'}, data: [{yAxis: t.mean}]},
+      markPoint: {symbol: 'circle', symbolSize: 10, data: [
+        {coord: [iMax, t.max], itemStyle: {color: C.red}, label: {position: 'top', color: C.red, fontWeight: 600, formatter: `${fmt(t.max, 1)} · 区间最高`}},
+        {coord: [iMin, t.min], itemStyle: {color: C.green}, label: {position: 'bottom', color: C.green, fontWeight: 600, formatter: `${t.min_date} · ${fmt(t.min, 1)}`}},
+        {coord: [n - 1, t.today], symbolSize: 14, itemStyle: {color: C.red, borderColor: '#fff', borderWidth: 3}, label: {position: 'top', distance: 12, color: C.red, fontSize: 22, fontWeight: 800, formatter: `今日\n${fmt(t.today, 1)}`}},
+      ]},
+    }],
+  });
+})();
+
+/* ---------- 2 浓度墙 ---------- */
+(function () {
+  const c = D.conc;
+  $('concSub').textContent = `浓度 = 个股 (小单+中单) 买卖成交额 ÷ 全档成交额，按板块加权；全市场今日 ${fmt(c.market)}%。颜色按排名三等分：红/橙/蓝。`;
+  $('wall').innerHTML = c.rows.map((r, i) => `
+    <tr class="${i === 0 ? 'top' : ''}">
+      <td class="nm">${r.icon} ${r.name}<span class="n">n=${r.n}</span></td>
+      <td class="bar hide-s"><div class="track"><div class="fill ${r.tier}" style="width:${r.today}%"></div>
+        ${r.prev != null ? `<div class="tick" style="left:${r.prev}%"></div>` : ''}</div></td>
+      <td class="v tv ${r.tier}">${fmt(r.today)}%</td>
+      <td class="c ${r.chg == null ? 'mute' : cls(r.chg)}">${r.chg == null ? '新增' : fmt(r.chg, 2, true)}</td>
+    </tr>`).join('');
+})();
+
+/* ---------- 3 资金流向 ---------- */
+(function () {
+  const f = D.flow;
+  $('flowSub').textContent = `沪市 ${f.count} 只核心 ETF 每日净申赎（亿元），正为流入；净申赎 = Δ份额 × 当日收盘价`;
+  const chart = echarts.init($('flowChart')); charts.push(chart);
+  const views = {
+    daily: {
+      tooltip: {trigger: 'axis', valueFormatter: v => fmt(v) + ' 亿'},
+      legend: {show: false},
+      xAxis: {...axisBase, type: 'category', data: f.dates},
+      yAxis: [{...axisBase, type: 'value', name: '亿元', nameTextStyle: {color: C.mute}}],
+      series: [{type: 'bar', barMaxWidth: 10, data: f.daily.map(v => ({value: v, itemStyle: {color: v >= 0 ? C.red : C.green}}))}],
+    },
+    cum: {
+      tooltip: {trigger: 'axis'},
+      legend: {show: true, top: 0, textStyle: {color: C.mute}},
+      xAxis: {...axisBase, type: 'category', data: f.dates},
+      yAxis: [{...axisBase, type: 'value', name: '累计净申购（亿元）', nameTextStyle: {color: C.mute}},
+              {...axisBase, type: 'value', name: f.index_name, scale: true, splitLine: {show: false}, nameTextStyle: {color: C.mute}}],
+      series: [
+        {name: '累计净申购', type: 'line', data: f.cum, showSymbol: false, lineStyle: {width: 2.5, color: C.red}, itemStyle: {color: C.red},
+         areaStyle: {color: 'rgba(200,64,47,.10)'}, connectNulls: true},
+        {name: f.index_name, type: 'line', yAxisIndex: 1, data: f.index, showSymbol: false, lineStyle: {width: 1.8, color: C.blue}, itemStyle: {color: C.blue}},
+      ],
+    },
+    shares: {
+      tooltip: {trigger: 'axis', valueFormatter: v => fmt(v) + ' 亿份'},
+      legend: {show: true, type: 'scroll', top: 0, textStyle: {color: C.mute}},
+      xAxis: {...axisBase, type: 'category', data: f.dates},
+      yAxis: [{...axisBase, type: 'value', name: '份额（亿份）', nameTextStyle: {color: C.mute}}],
+      series: Object.entries(f.shares).map(([k, v]) => ({name: k, type: 'line', data: v, showSymbol: false})),
+    },
+  };
+  const show = k => {
+    chart.setOption({grid: {left: 56, right: 56, top: 44, bottom: 30}, ...views[k]}, {notMerge: true});
+    document.querySelectorAll('#flowTabs button').forEach(b => b.classList.toggle('on', b.dataset.k === k));
+  };
+  document.querySelectorAll('#flowTabs button').forEach(b => b.onclick = () => show(b.dataset.k));
+  show('daily');
+})();
+
+/* ---------- 4 左：本轮净申赎 ---------- */
+(function () {
+  const r = D.round;
+  const d8 = s => s ? `${+s.slice(4, 6)}/${+s.slice(6)}` : '—';
+  $('roundTitle').textContent = `📊 ${r.count} 只固定宽基本轮逐日净申赎`;
+  $('roundSub').innerHTML = `${d8(r.start)}—${d8(r.end)} 累计 <b class="${cls(r.total)}">${fmt(r.total, 2, true)} 亿元</b>；按 ${r.attr_pct[0]}%—${r.attr_pct[1]}% 归因情景，疑似国家队回补约 ${fmt(r.attr_lo, 0)}—${fmt(r.attr_hi, 0)} 亿（中值 ${fmt(r.attr_mid, 0)} 亿）。归因比例为假设，非公开数据。`;
+  $('days').innerHTML = r.cards.map(c => `<div class="day"><div class="l">${c.label}</div>
+    <div class="v ${c.value == null ? 'mute' : cls(c.value)}">${c.value == null ? '待披露' : fmt(c.value, 2, true) + ' 亿'}</div></div>`).join('');
+  mk('monthChart', {
+    grid: {left: 56, right: 10, top: 36, bottom: 44},
+    tooltip: {trigger: 'axis', valueFormatter: v => fmt(v, 0) + ' 亿'},
+    xAxis: {...axisBase, type: 'category', data: r.months.map(m => `${m.label}\n${m.days} 日`), axisLabel: {color: '#5d554d', fontWeight: 600, lineHeight: 16}},
+    yAxis: {...axisBase, type: 'value'},
+    series: [{type: 'bar', barWidth: '62%', data: r.months.map(m => ({value: m.value, itemStyle: {color: m.value >= 0 ? C.red : C.green, borderRadius: 3},
+      label: {show: true, position: m.value >= 0 ? 'top' : 'bottom', color: m.value >= 0 ? C.red : C.green, fontWeight: 700, fontSize: 15,
+        formatter: p => fmt(p.value, 0, true)}}))}],
+  });
+})();
+
+/* ---------- 4 右：成交指纹 ---------- */
+(function () {
+  const f = D.fp;
+  $('fpTitle').textContent = `🔍 ${D.date_short} 成交指纹：谁在退、谁在进`;
+  $('fp').innerHTML = f.rows.map(r => `<tr><td>${r.name}</td><td class="${cls(r.chg)}">${fmt(r.today)} 亿 · 昨 ${fmt(r.prev)}（${fmt(r.chg, 0, true)}%）</td></tr>`).join('') +
+    `<tr><td>核心五通道尾盘占比</td><td>${f.tail_today == null ? '<span class="mute">无分钟数据</span>' : `${fmt(f.tail_today)}%（昨 ${fmt(f.tail_prev)}%）`}</td></tr>`;
+  $('verdict').innerHTML = `<div class="big"><b>${f.headline}</b><span>${f.sub}</span></div><p>${f.text}</p>`;
+  const max = Math.max(120, ...f.rows.map(r => r.ratio || 0));
+  $('ratios').innerHTML = f.rows.map(r => `<div class="ratio"><div>${r.short}</div>
+    <div class="track"><div class="fill" style="width:${(r.ratio || 0) / max * 100}%;background:${(r.ratio || 0) >= 100 ? C.red : C.green}"></div>
+      <div class="base" style="left:${100 / max * 100}%"></div></div>
+    <div class="p ${(r.ratio || 0) >= 100 ? 'red' : 'green'}">${fmt(r.ratio, 0)}%</div></div>`).join('');
+  $('fpFoot').textContent = f.foot;
+})();
+</script>
+</body>
+</html>

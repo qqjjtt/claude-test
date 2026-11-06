@@ -1,0 +1,5 @@
+tushare>=1.4
+pandas>=2.0
+numpy
+# 可选：--opend
+# futu-api

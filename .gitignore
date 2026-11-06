@@ -9,3 +9,4 @@ htmlcov/
 dist/
 build/
 *.egg-info/
+market_dashboard/dashboard.html
